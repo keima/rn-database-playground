@@ -1,70 +1,28 @@
-import React, {useCallback, useEffect, useState} from 'react';
+import React, {useCallback} from 'react';
 import {
-  Text,
   FlatList,
-  Pressable,
   ListRenderItem,
+  Pressable,
   StyleSheet,
+  Text,
 } from 'react-native';
-import {RouteProp} from '@react-navigation/native';
 import {StackNavigationProp} from '@react-navigation/stack';
 import {RootStackParamList} from '../App';
 import Post from '../db/model/Post';
-import {
-  useObservable,
-  useObservableEagerState,
-  useObservableState,
-  useSubscription,
-} from 'observable-hooks';
+import {useObservable, useObservableState} from 'observable-hooks';
 import {useDatabase} from '@nozbe/watermelondb/hooks';
-import {Database, Q} from '@nozbe/watermelondb';
-import {of, interval, zip} from 'rxjs';
-import {
-  map,
-  distinctUntilChanged,
-  switchMap,
-  catchError,
-  startWith,
-  mergeMap,
-  tap,
-  timeInterval,
-  publish,
-} from 'rxjs/operators';
+import Comment from '../db/model/Comment';
+import {prepareCreatePost} from '../db/dao/posts';
+import {prepareCreateComment} from '../db/dao/comment';
 
-type ListScreenRouteProp = RouteProp<RootStackParamList, 'List'>;
-type ListScreenNavigationProp = StackNavigationProp<RootStackParamList, 'List'>
+type ListScreenNavigationProp = StackNavigationProp<RootStackParamList, 'List'>;
 
 type Props = {
   navigation: ListScreenNavigationProp;
 };
 
 const Component: React.FC<Props> = ({navigation}) => {
-  // const [posts, setPosts] = useState<Post[]>([]);
   const db = useDatabase();
-
-  // const x = useObservableState(
-  //   zip(interval(1000), of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)).pipe(
-  //     map((values) => values[1]),
-  //     tap((value) => console.log('rx', value)),
-  //   ),
-  // );
-
-  // :+1:
-  // useSubscription(
-  //   zip(interval(1000), of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)).pipe(
-  //     map((values) => values[1]),
-  //     tap((value) => console.log('rx.tap', value)),
-  //   ),
-  //   (value) => {
-  //     console.log('rx.next', value);
-  //   },
-  //   (error) => {
-  //     console.warn('ex.error', error);
-  //   },
-  //   () => {
-  //     console.log('rx.complete');
-  //   },
-  // );
 
   const postsCollection$ = useObservable<Post[]>(() =>
     db.collections
@@ -74,7 +32,7 @@ const Component: React.FC<Props> = ({navigation}) => {
       .observe(),
   );
 
-  const posts = useObservableEagerState(postsCollection$);
+  const posts = useObservableState(postsCollection$);
 
   console.log('ListScreen: render', posts?.length);
 
@@ -96,16 +54,28 @@ const Component: React.FC<Props> = ({navigation}) => {
   );
 
   const createPost = useCallback(async () => {
-    const postsCollection = db.collections.get<Post>('posts');
+    const postsCollection = db.get<Post>(Post.table);
 
     db.action(async () => {
-      const post = await postsCollection.create((post) => {
-        post.title = 'title';
-        post.subtitle = 'subtitle';
-        post.body = 'Lorem Ipsum...';
-        post.isPinned = false;
+      const post = await postsCollection.create((_post) => {
+        _post.title = 'title';
+        _post.subtitle = 'subtitle';
+        _post.body = 'Lorem Ipsum...';
+        _post.isPinned = false;
       });
       console.log('post created:', post.id);
+    });
+  }, [db]);
+
+  const bulkPostAndComments = useCallback(async () => {
+    const postCollection = db.get<Post>(Post.table);
+    const commentCollection = db.get<Comment>(Comment.table);
+
+    const post = await prepareCreatePost(postCollection);
+    const comment = await prepareCreateComment(commentCollection, post.id);
+
+    await db.action(async () => {
+      await db.batch(post, comment);
     });
   }, [db]);
 
@@ -124,6 +94,11 @@ const Component: React.FC<Props> = ({navigation}) => {
           <Pressable onPress={createPost} style={styles.createButton}>
             <Text>Create Post</Text>
           </Pressable>
+          <Pressable
+            onPress={bulkPostAndComments}
+            style={styles.createBulkButton}>
+            <Text>Bulk Create</Text>
+          </Pressable>
         </>
       }
     />
@@ -139,6 +114,12 @@ const styles = StyleSheet.create({
   createButton: {
     height: 48,
     backgroundColor: 'lightgreen',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  createBulkButton: {
+    height: 48,
+    backgroundColor: 'green',
     justifyContent: 'center',
     alignItems: 'center',
   },

@@ -16,7 +16,6 @@ const adapter = new SQLiteAdapter({
   // synchronous mode only works on iOS.
   // improves performance and reduces glitches in most cases,
   // but also has some downsides - test with and without it
-  // @ts-ignore 型なし
   synchronous: true,
 
   // experimental JSI mode, use only if you're brave

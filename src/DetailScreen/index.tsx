@@ -1,12 +1,12 @@
 import React, {useCallback, useState} from 'react';
 import {
-  View,
-  Text,
+  Button,
   FlatList,
   ListRenderItem,
   Pressable,
-  Button,
+  Text,
   TextInput,
+  View,
 } from 'react-native';
 import {RouteProp, useRoute} from '@react-navigation/native';
 import {RootStackParamList} from '../App';
@@ -14,8 +14,7 @@ import {useDatabase} from '@nozbe/watermelondb/hooks';
 import {useObservable, useObservableState} from 'observable-hooks';
 import Post from '../db/model/Post';
 import Comment from '../db/model/Comment';
-import {map} from 'rxjs/operators';
-import {Database, Q} from '@nozbe/watermelondb';
+import {Q} from '@nozbe/watermelondb';
 
 type DetailScreenRouteProp = RouteProp<RootStackParamList, 'Detail'>;
 
@@ -61,7 +60,7 @@ const Component = () => {
     db.action(async () => {
       const newComment = await commentsCollection.create((c) => {
         c.body = commentBody;
-        c.postId = post.id;
+        c.post.id = post.id;
       });
       console.log('created comment', newComment.id);
     });
