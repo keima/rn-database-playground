@@ -12,8 +12,10 @@ import Post from '../db/model/Post';
 import {useObservable, useObservableState} from 'observable-hooks';
 import {useDatabase} from '@nozbe/watermelondb/hooks';
 import Comment from '../db/model/Comment';
-import {prepareCreatePost} from '../db/dao/posts';
-import {prepareCreateComment} from '../db/dao/comment';
+import {prepareCreatePost, prepareUpdatePost} from '../db/dao/posts';
+import {prepareCreateComment, prepareUpdateComment} from '../db/dao/comments';
+import Author from '../db/model/Author';
+import {prepareCreateAuthor} from '../db/dao/authors';
 
 type ListScreenNavigationProp = StackNavigationProp<RootStackParamList, 'List'>;
 
@@ -79,6 +81,21 @@ const Component: React.FC<Props> = ({navigation}) => {
     });
   }, [db]);
 
+  const createExperimental = useCallback(async () => {
+    const authorsCollection = db.get<Author>(Author.table);
+    const postsCollection = db.get<Post>(Post.table);
+    const commentsCollection = db.get<Comment>(Comment.table);
+
+    db.action(async () => {
+      const post = prepareCreatePost(postsCollection);
+      const comment = prepareCreateComment(commentsCollection, post.id);
+      const author = prepareCreateAuthor(authorsCollection);
+      const newPost = prepareUpdatePost(post, author.id);
+
+      db.batch(post, comment, author, newPost);
+    });
+  }, [db]);
+
   return (
     <FlatList
       data={posts}
@@ -98,6 +115,11 @@ const Component: React.FC<Props> = ({navigation}) => {
             onPress={bulkPostAndComments}
             style={styles.createBulkButton}>
             <Text>Bulk Create</Text>
+          </Pressable>
+          <Pressable
+            onPress={createExperimental}
+            style={styles.fixedCreateButton}>
+            <Text>???</Text>
           </Pressable>
         </>
       }
@@ -120,6 +142,12 @@ const styles = StyleSheet.create({
   createBulkButton: {
     height: 48,
     backgroundColor: 'green',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fixedCreateButton: {
+    height: 48,
+    backgroundColor: 'darkgreen',
     justifyContent: 'center',
     alignItems: 'center',
   },

@@ -4,6 +4,7 @@ import SQLiteAdapter from '@nozbe/watermelondb/adapters/sqlite';
 import schema from './schema';
 import Post from './model/Post';
 import Comment from './model/Comment';
+import Author from './model/Author';
 
 // First, create the adapter to the underlying database:
 const adapter = new SQLiteAdapter({
@@ -25,7 +26,7 @@ const adapter = new SQLiteAdapter({
 // Then, make a Watermelon database from it!
 const database = new Database({
   adapter,
-  modelClasses: [Comment, Post],
+  modelClasses: [Comment, Post, Author],
   actionsEnabled: true,
 });
 
